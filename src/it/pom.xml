@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.fusesource.restygwt</groupId>
+  <artifactId>restygwt-rxadapter-it-parent</artifactId>
+  <version>@project.version@</version>
+  <packaging>pom</packaging>
+
+  <name>RestyGWT Parent for ITs</name>
+
+  <description>
+    RestyGWT Parent POM for integration tests
+  </description>
+
+  <properties>
+    <maven.compiler.source>1.7</maven.compiler.source>
+    <maven.compiler.target>1.7</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <gwt.version>@gwt.version@</gwt.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>restygwt-rxadapter</groupId>
+      <artifactId>restygwt-rxadapter</artifactId>
+      <version>@project.version@</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>rxjava-gwt</groupId>
+      <artifactId>rxjava-gwt</artifactId>
+      <version>@rxjava-gwt.version@</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.fusesource.restygwt</groupId>
+      <artifactId>restygwt</artifactId>
+      <version>@restygwt.version@</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.gwt</groupId>
+      <artifactId>gwt-user</artifactId>
+      <version>${gwt.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.gwt</groupId>
+      <artifactId>gwt-dev</artifactId>
+      <version>${gwt.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.7</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <outputDirectory>${project.build.directory}/${project.build.finalName}/WEB-INF/classes</outputDirectory>
+    <plugins>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.1</version>
+        <configuration>
+          <source>1.7</source>
+          <target>1.7</target>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-war-plugin</artifactId>
+        <version>2.0.2</version>
+        <configuration>
+          <warSourceDirectory>war</warSourceDirectory>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>gwt-maven-plugin</artifactId>
+        <version>${gwt.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>compile</goal>
+              <goal>test</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <gen>${project.build.directory}</gen>
+          <logLevel>INFO</logLevel>
+          <style>PRETTY</style>
+          <jsInteropMode>JS</jsInteropMode>
+          <extraJvmArgs>-Xmx512m</extraJvmArgs>
+          <runTarget>ui/ui.html</runTarget>
+          <includes>**/RestyGWTTestSuite.java</includes>
+          <gen>${project.build.directory}/generated-sources/gwt</gen>
+        </configuration>
+      </plugin>
+
+    </plugins>
+  </build>
+</project>
