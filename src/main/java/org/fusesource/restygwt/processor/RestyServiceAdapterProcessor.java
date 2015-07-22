@@ -1,6 +1,7 @@
 package org.fusesource.restygwt.processor;
 
 import static com.google.auto.common.MoreTypes.asDeclared;
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.FluentIterable.from;
 
 import com.google.auto.common.MoreElements;
@@ -53,7 +54,7 @@ import rx.Observable;
 import rx.Subscriber;
 
 @AutoService(Processor.class)
-@SupportedOptions({"debug", "verify"})
+@SupportedOptions({ "debug", "verify" })
 public class RestyServiceAdapterProcessor extends AbstractProcessor {
 
     @Override
@@ -87,7 +88,8 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
         return true;
     }
 
-    private void processAnnotations(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) throws Exception {
+    private void processAnnotations(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv)
+            throws Exception {
         Filer filer = processingEnv.getFiler();
 
         List<? extends TypeElement> elements = from(roundEnv.getElementsAnnotatedWith(RestyService.class))
@@ -109,7 +111,8 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
             ClassName restyName = ClassName.get(serviceName.packageName(), serviceName.simpleName() + "_RestyService");
             log("service resty interface: " + restyName);
 
-            ClassName adapterName = ClassName.get(serviceName.packageName(), serviceName.simpleName() + "_RestyAdapter");
+            ClassName adapterName = ClassName
+                    .get(serviceName.packageName(), serviceName.simpleName() + "_RestyAdapter");
             log("service resty adapter: " + adapterName);
 
             final TypeSpec.Builder restyBuilder = TypeSpec.interfaceBuilder(restyName.simpleName())
@@ -189,7 +192,7 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                         .addStatement("" +
                                         "return $1T.create(new $2T<$3T>() {\n" +
                                         "  public void call($4T<? super $3T> subscription) {\n" +
-                                        "    service().$5L($6L, $7T.$8L(subscription));\n" +
+                                        "    service().$5L($6L$7T.$8L(subscription));\n" +
                                         "  }\n" +
                                         "})",
                                 ClassName.get(Observable.class),
@@ -197,7 +200,7 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                                 ClassName.get(observableType),
                                 ClassName.get(Subscriber.class),
                                 method.getSimpleName().toString(),
-                                parameterNames,
+                                isNullOrEmpty(parameterNames) ? "" : parameterNames + ", ",
                                 ClassName.get(SubscriberMethodCallback.class),
                                 isOverlay(observableType) ? "overlay" : "method"
                         ).build());
@@ -232,7 +235,6 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                     public AnnotationSpec apply(AnnotationMirror input) { return AnnotationSpec.get(input); }
                 });
     }
-
 
     private void log(String msg) {
         if (processingEnv.getOptions().containsKey("debug")) {

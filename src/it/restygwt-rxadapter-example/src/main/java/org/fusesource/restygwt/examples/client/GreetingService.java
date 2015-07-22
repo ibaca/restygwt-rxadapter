@@ -1,5 +1,6 @@
 package org.fusesource.restygwt.examples.client;
 
+import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 
@@ -10,10 +11,13 @@ import rx.Observable;
 @Path("/greeting-service")
 public interface GreetingService {
 
+    @GET Observable<Overlay> overlay();
     @POST Observable<Overlay> overlay(Overlay name);
 
+    @GET Observable<Pojo> pojo();
     @POST Observable<Pojo> pojo(Pojo name);
 
+    @GET Observable<Interop> interop();
     @POST Observable<Interop> interop(Interop name);
 
     class Factory {
