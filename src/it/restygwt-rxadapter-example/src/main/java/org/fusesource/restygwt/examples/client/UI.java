@@ -17,18 +17,20 @@ import rx.Subscriber;
 public class UI implements EntryPoint {
 
     public void onModuleLoad() {
-        RootPanel.get().add(new Label("Name:"));
-        final TextBox nameInput = new TextBox();
-        RootPanel.get().add(nameInput);
-        nameInput.addValueChangeHandler(event -> getCustomGreeting(nameInput.getValue()));
-        nameInput.setValue("ping", true);
-    }
-
-    private void getCustomGreeting(String name) {
         GreetingService service = GreetingService.Factory.create();
         Resource resource = new Resource(GWT.getModuleBaseURL() + "greeting-service");
         ((RestServiceProxy) service).setResource(resource);
 
+        RootPanel.get().add(new Label("Name:"));
+        final TextBox nameInput = new TextBox();
+        RootPanel.get().add(nameInput);
+        nameInput.addValueChangeHandler(event -> getCustomGreeting(service, nameInput.getValue()));
+        nameInput.setValue("ping", true);
+
+        service.ping().doOnTerminate(() -> RootPanel.get().add(new Label("pong"))).subscribe();
+    }
+
+    private void getCustomGreeting(GreetingService service, String name) {
         Overlay overlay = (Overlay) JavaScriptObject.createObject();
         overlay.setStr(name);
         service.overlay(overlay).subscribe(subscriber("overlays", new AbstractRenderer<Overlay>() {

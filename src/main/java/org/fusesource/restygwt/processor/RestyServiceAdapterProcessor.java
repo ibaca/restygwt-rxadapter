@@ -185,7 +185,7 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                                 method.getSimpleName().toString(),
                                 isNullOrEmpty(parameterNames) ? "" : parameterNames + ", ",
                                 ClassName.get(SubscriberMethodCallback.class),
-                                isOverlay(returnType) ? "overlay" : "method"
+                                isOverlay(returnType) ? "overlay" : "pojo"
                         ).build());
             }
 
@@ -199,12 +199,16 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
         }
     }
 
-    private boolean isOverlay(TypeMirror observableType) {
+    private boolean isOverlay(TypeMirror T) {
+        // Void
+        final TypeMirror vd = processingEnv.getElementUtils().getTypeElement(Void.class.getName()).asType();
         // JavaScriptObject
         final TypeMirror js = processingEnv.getElementUtils().getTypeElement(JavaScriptObject.class.getName()).asType();
         // Observable<T> type
-        final TypeElement ot = processingEnv.getElementUtils().getTypeElement(observableType.toString());
-        return processingEnv.getTypeUtils().isSubtype(observableType, js) || ot.getAnnotation(JsType.class) != null;
+        final TypeElement ot = processingEnv.getElementUtils().getTypeElement(T.toString());
+        return processingEnv.getTypeUtils().isSubtype(T, js)
+                || ot.getAnnotation(JsType.class) != null
+                || processingEnv.getTypeUtils().isSameType(T, vd);
     }
 
     private FluentIterable<AnnotationSpec> transformAnnotations(List<? extends AnnotationMirror> annotationMirrors) {

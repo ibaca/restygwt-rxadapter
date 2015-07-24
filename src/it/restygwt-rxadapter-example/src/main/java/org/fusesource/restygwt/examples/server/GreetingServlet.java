@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -19,16 +20,13 @@ public class GreetingServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        log.info("Sending Hello World");
+        log.info("Sending 'Hello World'...");
         try {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode helloJsonNode = mapper.readTree(helloWorldJson);
             mapper.writeValue(resp.getOutputStream(), helloJsonNode);
         } catch (Throwable e) {
-            e.printStackTrace();
-        } finally {
-            System.out.flush();
-            System.err.flush();
+            log.log(Level.SEVERE, "error sending 'Hello World'", e);
         }
     }
 
@@ -45,10 +43,11 @@ public class GreetingServlet extends HttpServlet {
             value.put("intArr", new ArrayNode(instance).add(1).add(2).add(3));
             mapper.writeValue(resp.getOutputStream(), new ArrayNode(instance).add(value));
         } catch (Throwable e) {
-            e.printStackTrace();
-        } finally {
-            System.out.flush();
-            System.err.flush();
+            log.log(Level.SEVERE, "error creating custom greeting", e);
         }
+    }
+
+    @Override protected void doPut(HttpServletRequest req, HttpServletResponse resp) {
+        log.info("Void pong response...");
     }
 }
