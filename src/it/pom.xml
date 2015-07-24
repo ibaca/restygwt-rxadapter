@@ -15,10 +15,10 @@
   </description>
 
   <properties>
-    <maven.compiler.source>1.7</maven.compiler.source>
-    <maven.compiler.target>1.7</maven.compiler.target>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <maven.compiler.source>@maven.compiler.source@</maven.compiler.source>
+    <maven.compiler.target>@maven.compiler.target@</maven.compiler.target>
+    <project.build.sourceEncoding>@project.build.sourceEncoding@</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>@project.build.outputEncoding@</project.reporting.outputEncoding>
     <gwt.version>@gwt.version@</gwt.version>
   </properties>
 
@@ -64,30 +64,20 @@
   <build>
     <outputDirectory>${project.build.directory}/${project.build.finalName}/WEB-INF/classes</outputDirectory>
     <plugins>
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.1</version>
-        <configuration>
-          <source>1.7</source>
-          <target>1.7</target>
-        </configuration>
       </plugin>
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-war-plugin</artifactId>
         <version>2.0.2</version>
-        <configuration>
-          <warSourceDirectory>war</warSourceDirectory>
-        </configuration>
       </plugin>
-
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>gwt-maven-plugin</artifactId>
-        <version>${gwt.version}</version>
+        <version>2.7.0</version>
         <executions>
           <execution>
             <goals>
@@ -100,14 +90,26 @@
           <gen>${project.build.directory}</gen>
           <logLevel>INFO</logLevel>
           <style>PRETTY</style>
+          <sourceLevel>1.8</sourceLevel>
           <jsInteropMode>JS</jsInteropMode>
           <extraJvmArgs>-Xmx512m</extraJvmArgs>
           <runTarget>ui/ui.html</runTarget>
           <includes>**/RestyGWTTestSuite.java</includes>
           <gen>${project.build.directory}/generated-sources/gwt</gen>
         </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>com.google.gwt</groupId>
+            <artifactId>gwt-user</artifactId>
+            <version>${gwt.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>com.google.gwt</groupId>
+            <artifactId>gwt-dev</artifactId>
+            <version>${gwt.version}</version>
+          </dependency>
+        </dependencies>
       </plugin>
-
     </plugins>
   </build>
 </project>

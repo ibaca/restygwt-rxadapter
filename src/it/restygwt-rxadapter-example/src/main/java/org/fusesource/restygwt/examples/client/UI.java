@@ -3,14 +3,13 @@ package org.fusesource.restygwt.examples.client;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.JavaScriptObject;
-import com.google.gwt.event.logical.shared.ValueChangeEvent;
-import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.text.shared.AbstractRenderer;
 import com.google.gwt.text.shared.Renderer;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.TextBox;
+import java.util.Arrays;
 import org.fusesource.restygwt.client.Resource;
 import org.fusesource.restygwt.client.RestServiceProxy;
 import rx.Subscriber;
@@ -21,12 +20,7 @@ public class UI implements EntryPoint {
         RootPanel.get().add(new Label("Name:"));
         final TextBox nameInput = new TextBox();
         RootPanel.get().add(nameInput);
-        nameInput.addValueChangeHandler(new ValueChangeHandler<String>() {
-            @Override
-            public void onValueChange(ValueChangeEvent<String> event) {
-                getCustomGreeting(nameInput.getValue());
-            }
-        });
+        nameInput.addValueChangeHandler(event -> getCustomGreeting(nameInput.getValue()));
         nameInput.setValue("ping", true);
     }
 
@@ -47,7 +41,9 @@ public class UI implements EntryPoint {
         interop.setStr(name);
         service.interop(interop).subscribe(subscriber("interop", new AbstractRenderer<Interop>() {
             public String render(Interop object) {
-                return object.getStr();
+                return object.getStr()
+                        + ", strArr: " + object.getStrArr()
+                        + ", intArr: " + Arrays.toString(object.getIntArr());
             }
         }));
 

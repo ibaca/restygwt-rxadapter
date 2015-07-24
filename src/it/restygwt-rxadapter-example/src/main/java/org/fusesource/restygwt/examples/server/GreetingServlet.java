@@ -1,27 +1,25 @@
 package org.fusesource.restygwt.examples.server;
 
-import java.io.IOException;
-import java.io.StringWriter;
+import static com.fasterxml.jackson.databind.node.JsonNodeFactory.instance;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.io.IOException;
+import java.util.logging.Logger;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import org.fusesource.restygwt.client.Resource;
-
 public class GreetingServlet extends HttpServlet {
+    private static final Logger log = Logger.getLogger(GreetingServlet.class.getName());
     private static final String helloWorldJson = "[{\"greeting\":\"Hello World\"}]";
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-
-        System.out.println("Sending Hello World");
+        log.info("Sending Hello World");
         try {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode helloJsonNode = mapper.readTree(helloWorldJson);
@@ -36,17 +34,16 @@ public class GreetingServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-
-        System.out.println("Creating custom greeting.");
+        log.info("Creating custom greeting.");
         try {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode nameObject = mapper.readValue(req.getInputStream(), ObjectNode.class);
-            String name = nameObject.get("str").asText();
 
-            String greeting = "Hello " + name;
-            ObjectNode resultObject = new ObjectNode(JsonNodeFactory.instance);
-            resultObject.put("str", greeting);
-            mapper.writeValue(resp.getOutputStream(), resultObject);
+            final ObjectNode value = new ObjectNode(instance);
+            value.put("str", "Hello " + nameObject.get("str").asText());
+            value.put("strArr", new ArrayNode(instance).add("a").add("b").add("c"));
+            value.put("intArr", new ArrayNode(instance).add(1).add(2).add(3));
+            mapper.writeValue(resp.getOutputStream(), new ArrayNode(instance).add(value));
         } catch (Throwable e) {
             e.printStackTrace();
         } finally {
