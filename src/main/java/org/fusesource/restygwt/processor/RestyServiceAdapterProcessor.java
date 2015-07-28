@@ -15,6 +15,7 @@ import com.google.gwt.core.client.js.JsType;
 import com.google.gwt.core.shared.GWT;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
@@ -25,8 +26,11 @@ import com.squareup.javapoet.TypeSpec;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Processor;
@@ -38,6 +42,7 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind;
 import org.fusesource.restygwt.client.AbstractAdapterService;
@@ -45,6 +50,7 @@ import org.fusesource.restygwt.client.MethodCallback;
 import org.fusesource.restygwt.client.OverlayCallback;
 import org.fusesource.restygwt.client.RestService;
 import org.fusesource.restygwt.client.RestyService;
+import org.fusesource.restygwt.client.RestyService.TypeMap;
 import org.fusesource.restygwt.client.SubscriberMethodCallback;
 import org.fusesource.restygwt.client.SubscriberMethodCallback.JsList;
 import rx.Observable;
@@ -96,8 +102,14 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
         log(annotations.toString());
         log(elements.toString());
 
+        final Map<TypeMirror, TypeMirror> typeMap = new HashMap<>();
+
         for (TypeElement restService : elements) {
             final AnnotationMirror annotation = MoreElements.getAnnotationMirror(restService, RestyService.class).get();
+
+            final TypeMap[] types = restService.getAnnotation(RestyService.class).types();
+            for (TypeMap type : types) typeMap.put(typeMap_type(type), typeMap_with(type));
+            final Function<TypeMirror, TypeMirror> typeMapper = t -> typeMap.getOrDefault(t, t);
 
             ClassName serviceName = ClassName.get(restService);
             log("service interface: " + serviceName);
@@ -140,23 +152,34 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                     continue;
                 }
                 final TypeMirror returnType = asDeclared(method.getReturnType()).getTypeArguments().get(0);
+                final TypeMirror serviceType = typeMapper.apply(returnType);
+                final CodeBlock.Builder paramCasts = CodeBlock.builder();
                 final String parameterNames = from(method.getParameters())
-                        .transform(input -> input.getSimpleName().toString())
+                        .transform(parameter -> {
+                            String paramName = parameter.getSimpleName().toString();
+                            if (typeMap.containsKey(parameter.asType())) {
+                                // requires casting
+                                paramName = paramName + "Cast";
+                                paramCasts.addStatement("$T $N = ($1T) $N",
+                                        typeMapper.apply(parameter.asType()), paramName, parameter.getSimpleName());
+                            }
+                            return paramName;
+                        })
                         .join(Joiner.on(", "));
 
                 // Resty methods
-                TypeName javaWrap = ParameterizedTypeName.get(ClassName.get(List.class), TypeName.get(returnType));
-                TypeName scriptWrap = ParameterizedTypeName.get(ClassName.get(JsList.class), TypeName.get(returnType));
+                TypeName javaWrap = ParameterizedTypeName.get(ClassName.get(List.class), TypeName.get(serviceType));
+                TypeName scriptWrap = ParameterizedTypeName.get(ClassName.get(JsList.class), TypeName.get(serviceType));
                 restyBuilder.addMethod(MethodSpec
                         .methodBuilder(method.getSimpleName().toString())
                         .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                         .addAnnotations(transformAnnotations(method.getAnnotationMirrors()))
                         .addParameters(from(method.getParameters())
-                                .transform(p -> ParameterSpec
-                                        .builder(TypeName.get(p.asType()), p.getSimpleName().toString())
+                                .transform(p -> ParameterSpec.builder(
+                                        TypeName.get(typeMapper.apply(p.asType())), p.getSimpleName().toString())
                                         .addAnnotations(transformAnnotations(p.getAnnotationMirrors()))
                                         .build()))
-                        .addParameter(isOverlay(returnType)
+                        .addParameter(isOverlay(serviceType)
                                 ? ParameterizedTypeName.get(ClassName.get(OverlayCallback.class), scriptWrap)
                                 : ParameterizedTypeName.get(ClassName.get(MethodCallback.class), javaWrap), "callback")
                         .build());
@@ -172,8 +195,8 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                                         .addModifiers(Modifier.FINAL)
                                         .addAnnotations(transformAnnotations(p.getAnnotationMirrors()))
                                         .build()))
-                        .addStatement("" +
-                                        "return $1T.create(new $2T<$3T>() {\n" +
+                        .addCode(paramCasts.build())
+                        .addStatement("return $1T.create(new $2T<$3T>() {\n" +
                                         "  public void call($4T<? super $3T> subscription) {\n" +
                                         "    service().$5L($6L$7T.$8L(subscription));\n" +
                                         "  }\n" +
@@ -185,7 +208,7 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                                 method.getSimpleName().toString(),
                                 isNullOrEmpty(parameterNames) ? "" : parameterNames + ", ",
                                 ClassName.get(SubscriberMethodCallback.class),
-                                isOverlay(returnType) ? "overlay" : "pojo"
+                                isOverlay(serviceType) ? "overlay" : "pojo"
                         ).build());
             }
 
@@ -229,5 +252,23 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
 
     private void fatalError(String msg) {
         processingEnv.getMessager().printMessage(Kind.ERROR, "FATAL ERROR: " + msg);
+    }
+
+    private TypeMirror typeMap_type(TypeMap annotation) {
+        try {
+            annotation.type();
+            throw new RuntimeException("unreachable");
+        } catch (MirroredTypeException exception) {
+            return exception.getTypeMirror();
+        }
+    }
+
+    private TypeMirror typeMap_with(TypeMap annotation) {
+        try {
+            annotation.with();
+            throw new RuntimeException("unreachable");
+        } catch (MirroredTypeException exception) {
+            return exception.getTypeMirror();
+        }
     }
 }

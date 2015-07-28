@@ -56,6 +56,14 @@ public class UI implements EntryPoint {
                 return object.getStr();
             }
         }));
+
+        Interface iface = (Overlay) JavaScriptObject.createObject();
+        iface.setStr(name);
+        service.iface(iface).subscribe(subscriber("iface", new AbstractRenderer<Interface>() {
+            public String render(Interface object) {
+                return object.getStr();
+            }
+        }));
     }
 
     private <T> Subscriber<T> subscriber(final String container, final Renderer<T> render) {

@@ -6,9 +6,10 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 
 import org.fusesource.restygwt.client.RestyService;
+import org.fusesource.restygwt.client.RestyService.TypeMap;
 import rx.Observable;
 
-@RestyService
+@RestyService(types = @TypeMap(type = Interface.class, with = Overlay.class))
 @Path("/greeting-service")
 public interface GreetingService {
 
@@ -22,6 +23,9 @@ public interface GreetingService {
 
     @GET Observable<Interop> interop();
     @POST Observable<Interop> interop(Interop name);
+
+    @GET Observable<Interface> iface();
+    @POST Observable<Interface> iface(Interface name);
 
     class Factory {
         public static GreetingService create() { return new GreetingService_RestyAdapter(); }

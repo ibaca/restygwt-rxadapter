@@ -2,7 +2,7 @@ package org.fusesource.restygwt.examples.client;
 
 import com.google.gwt.core.client.JavaScriptObject;
 
-public class Overlay extends JavaScriptObject {
+public class Overlay extends JavaScriptObject implements Interface {
 
     protected Overlay() {
     }
