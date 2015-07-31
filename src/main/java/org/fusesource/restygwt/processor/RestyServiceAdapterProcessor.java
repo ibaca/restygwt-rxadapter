@@ -147,10 +147,20 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                     .filter(input -> input.getKind() == ElementKind.METHOD)
                     .filter(ExecutableElement.class);
             for (ExecutableElement method : methods) {
+                final String methodName = method.getSimpleName().toString();
+
+                if (isIncompatible(method)) {
+                    adapterBuilder.addMethod(MethodSpec.overriding(method)
+                            .addStatement("throw new $T(\"$L\")", UnsupportedOperationException.class, methodName)
+                            .build());
+                    continue;
+                }
+
                 if (!MoreTypes.isTypeOf(Observable.class, method.getReturnType())) {
                     error("Observable<T> return type required", method, annotation);
                     continue;
                 }
+
                 final TypeMirror returnType = asDeclared(method.getReturnType()).getTypeArguments().get(0);
                 final TypeMirror serviceType = typeMapper.apply(returnType);
                 final CodeBlock.Builder paramCasts = CodeBlock.builder();
@@ -171,7 +181,7 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                 TypeName javaWrap = ParameterizedTypeName.get(ClassName.get(List.class), TypeName.get(serviceType));
                 TypeName scriptWrap = ParameterizedTypeName.get(ClassName.get(JsList.class), TypeName.get(serviceType));
                 restyBuilder.addMethod(MethodSpec
-                        .methodBuilder(method.getSimpleName().toString())
+                        .methodBuilder(methodName)
                         .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                         .addAnnotations(transformAnnotations(method.getAnnotationMirrors()))
                         .addParameters(from(method.getParameters())
@@ -186,7 +196,7 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
 
                 // Adapter methods
                 adapterBuilder.addMethod(MethodSpec
-                        .methodBuilder(method.getSimpleName().toString())
+                        .methodBuilder(methodName)
                         .addModifiers(Modifier.PUBLIC)
                         .returns(TypeName.get(method.getReturnType()))
                         .addParameters(from(method.getParameters())
@@ -205,7 +215,7 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                                 ClassName.get(Observable.OnSubscribe.class),
                                 ClassName.get(returnType),
                                 ClassName.get(Subscriber.class),
-                                method.getSimpleName().toString(),
+                                methodName,
                                 isNullOrEmpty(parameterNames) ? "" : parameterNames + ", ",
                                 ClassName.get(SubscriberMethodCallback.class),
                                 isOverlay(serviceType) ? "overlay" : "pojo"
@@ -220,6 +230,15 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
             JavaFile.builder(serviceName.packageName(), adapterBuilder.build()).build().writeTo(adapterOut);
             adapterOut.close();
         }
+    }
+
+    private boolean isIncompatible(ExecutableElement method) {
+        for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
+            if (annotationMirror.getAnnotationType().toString().endsWith("GwtIncompatible")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isOverlay(TypeMirror T) {
