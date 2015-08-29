@@ -11,9 +11,10 @@ import rx.internal.util.BackpressureDrainManager.BackpressureQueueCallback;
 public abstract class SubscriberMethodCallback<T, R> implements MethodCallback<R>, BackpressureQueueCallback {
 
     public static <T> OverlayCallback<JsList<T>> overlay(Subscriber<? super T> s) {
-        return new OverlayMethodCallback<>(new SubscriberMethodCallback<T, JsList<T>>(s) {
-            @Override public void onSuccess(Method method, JsList<T> ts) {
-                this.response = ts == null ? Collections.emptyIterator() : new Iterator<T>() {
+        return new OverlayCallbackAdapter<>(new SubscriberMethodCallback<T, JsList<T>>(s) {
+            @Override public void onSuccess(Method method, final JsList<T> ts) {
+                if (ts == null) response = Collections.emptyIterator();
+                else response = new Iterator<T>() {
                     int pos = 0;
 
                     @Override public boolean hasNext() { return pos < ts.length(); }
@@ -99,5 +100,21 @@ public abstract class SubscriberMethodCallback<T, R> implements MethodCallback<R
         public final native int length() /*-{
             return this.length;
         }-*/;
+    }
+
+    private static final class OverlayCallbackAdapter<T extends JavaScriptObject> implements OverlayCallback<T> {
+        private final MethodCallback<T> adaptee;
+
+        private OverlayCallbackAdapter(MethodCallback<T> adaptee) {
+            this.adaptee = adaptee;
+        }
+
+        @Override public void onFailure(Method method, Throwable exception) {
+            adaptee.onFailure(method, exception);
+        }
+
+        @Override public void onSuccess(Method method, T response) {
+            adaptee.onSuccess(method, response);
+        }
     }
 }

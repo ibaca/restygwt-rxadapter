@@ -21,8 +21,9 @@ public interface GreetingService {
     @GET Observable<Pojo> pojo();
     @POST Observable<Pojo> pojo(Pojo name);
 
-    @GET Observable<Interop> interop();
-    @POST Observable<Interop> interop(Interop name);
+    // XXX Requires restygwt patch
+    // @GET Observable<Interop> interop();
+    // @POST Observable<Interop> interop(Interop name);
 
     @GET Observable<Interface> iface();
     @POST Observable<Interface> iface(Interface name);

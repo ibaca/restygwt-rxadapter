@@ -18,8 +18,8 @@
     <maven.compiler.target>1.8</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <gwt.version>2.8.0-i20150717</gwt.version>
-    <restygwt.version>2.0.4-SNAPSHOT</restygwt.version>
+    <gwt.version>2.7.0</gwt.version>
+    <restygwt.version>2.0.3</restygwt.version>
     <rxjava-gwt.version>0.1-SNAPSHOT</rxjava-gwt.version>
   </properties>
 

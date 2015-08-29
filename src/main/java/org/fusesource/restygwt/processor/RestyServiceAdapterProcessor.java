@@ -170,7 +170,7 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                             if (typeMap.containsKey(parameter.asType())) {
                                 // requires casting
                                 paramName = paramName + "Cast";
-                                paramCasts.addStatement("$T $N = ($1T) $N",
+                                paramCasts.addStatement("final $T $N = ($1T) $N",
                                         typeMapper.apply(parameter.asType()), paramName, parameter.getSimpleName());
                             }
                             return paramName;
@@ -208,17 +208,18 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                         .addCode(paramCasts.build())
                         .addStatement("return $1T.create(new $2T<$3T>() {\n" +
                                         "  public void call($4T<? super $3T> subscription) {\n" +
-                                        "    service().$5L($6L$7T.$8L(subscription));\n" +
+                                        "    service().$5L($6L$7T.<$8T>$9L(subscription));\n" +
                                         "  }\n" +
                                         "})",
-                                ClassName.get(Observable.class),
-                                ClassName.get(Observable.OnSubscribe.class),
-                                ClassName.get(returnType),
-                                ClassName.get(Subscriber.class),
-                                methodName,
-                                isNullOrEmpty(parameterNames) ? "" : parameterNames + ", ",
-                                ClassName.get(SubscriberMethodCallback.class),
-                                isOverlay(serviceType) ? "overlay" : "pojo"
+                                /*1*/ ClassName.get(Observable.class),
+                                /*2*/ ClassName.get(Observable.OnSubscribe.class),
+                                /*3*/ ClassName.get(returnType),
+                                /*4*/ ClassName.get(Subscriber.class),
+                                /*5*/ methodName,
+                                /*6*/ isNullOrEmpty(parameterNames) ? "" : parameterNames + ", ",
+                                /*7*/ ClassName.get(SubscriberMethodCallback.class),
+                                /*8*/ serviceType,
+                                /*9*/ isOverlay(serviceType) ? "overlay" : "pojo"
                         ).build());
             }
 
