@@ -25,7 +25,6 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.io.Writer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -223,13 +222,8 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                         ).build());
             }
 
-            final Writer serviceOut = filer.createSourceFile(restyName.toString()).openWriter();
-            JavaFile.builder(serviceName.packageName(), restyBuilder.build()).build().writeTo(serviceOut);
-            serviceOut.close();
-
-            final Writer adapterOut = filer.createSourceFile(adapterName.toString()).openWriter();
-            JavaFile.builder(serviceName.packageName(), adapterBuilder.build()).build().writeTo(adapterOut);
-            adapterOut.close();
+            JavaFile.builder(serviceName.packageName(), restyBuilder.build()).build().writeTo(filer);
+            JavaFile.builder(serviceName.packageName(), adapterBuilder.build()).build().writeTo(filer);
         }
     }
 
@@ -247,10 +241,8 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
         final TypeMirror vd = processingEnv.getElementUtils().getTypeElement(Void.class.getName()).asType();
         // JavaScriptObject
         final TypeMirror js = processingEnv.getElementUtils().getTypeElement(JavaScriptObject.class.getName()).asType();
-        // Observable<T> type
-        final TypeElement ot = processingEnv.getElementUtils().getTypeElement(T.toString());
         return processingEnv.getTypeUtils().isSubtype(T, js)
-                || ot.getAnnotation(JsType.class) != null
+                || T.getAnnotationsByType(JsType.class).length > 0
                 || processingEnv.getTypeUtils().isSameType(T, vd);
     }
 
