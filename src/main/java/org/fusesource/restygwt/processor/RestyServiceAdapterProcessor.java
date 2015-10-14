@@ -1,15 +1,15 @@
 package org.fusesource.restygwt.processor;
 
 import static com.google.auto.common.MoreTypes.asDeclared;
+import static com.google.auto.common.MoreTypes.isTypeOf;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.FluentIterable.from;
+import static java.util.Collections.singleton;
+import static javax.lang.model.element.Modifier.STATIC;
 
 import com.google.auto.common.MoreElements;
-import com.google.auto.common.MoreTypes;
-import com.google.auto.service.AutoService;
 import com.google.common.base.Joiner;
 import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableSet;
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.js.JsType;
 import com.google.gwt.core.shared.GWT;
@@ -32,7 +32,6 @@ import java.util.Set;
 import java.util.function.Function;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
-import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
@@ -53,46 +52,36 @@ import org.fusesource.restygwt.client.RestyService.TypeMap;
 import org.fusesource.restygwt.client.SubscriberMethodCallback;
 import org.fusesource.restygwt.client.SubscriberMethodCallback.JsList;
 import rx.Observable;
+import rx.Single;
+import rx.SingleSubscriber;
 import rx.Subscriber;
 
-@AutoService(Processor.class)
 public class RestyServiceAdapterProcessor extends AbstractProcessor {
 
-    @Override
-    public ImmutableSet<String> getSupportedAnnotationTypes() {
-        return ImmutableSet.of(RestyService.class.getName());
-    }
+    private Set<? extends TypeElement> annotations;
+    private RoundEnvironment roundEnv;
 
-    @Override
-    public SourceVersion getSupportedSourceVersion() {
-        return SourceVersion.latestSupported();
-    }
+    @Override public Set<String> getSupportedAnnotationTypes() { return singleton(RestyService.class.getName()); }
 
-    @Override
-    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    @Override public SourceVersion getSupportedSourceVersion() { return SourceVersion.latestSupported(); }
+
+    @Override public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+        if (roundEnv.processingOver()) return false;
+
+        this.annotations = annotations;
+        this.roundEnv = roundEnv;
         try {
-            return processImpl(annotations, roundEnv);
+            processAnnotations();
         } catch (Exception e) {
             // We don't allow exceptions of any kind to propagate to the compiler
             StringWriter writer = new StringWriter();
             e.printStackTrace(new PrintWriter(writer));
             fatalError(writer.toString());
-            return true;
         }
-    }
-
-    private boolean processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) throws Exception {
-        if (!roundEnv.processingOver()) {
-            processAnnotations(annotations, roundEnv);
-        }
-
         return true;
     }
 
-    private void processAnnotations(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv)
-            throws Exception {
-        Filer filer = processingEnv.getFiler();
-
+    private void processAnnotations() throws Exception {
         List<? extends TypeElement> elements = from(roundEnv.getElementsAnnotatedWith(RestyService.class))
                 .filter(TypeElement.class)
                 .filter(input -> input.getKind().isInterface())
@@ -101,14 +90,14 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
         log(annotations.toString());
         log(elements.toString());
 
-        final Map<TypeMirror, TypeMirror> typeMap = new HashMap<>();
+        Map<TypeMirror, TypeMirror> typeMap = new HashMap<>();
 
         for (TypeElement restService : elements) {
-            final AnnotationMirror annotation = MoreElements.getAnnotationMirror(restService, RestyService.class).get();
+            AnnotationMirror annotation = MoreElements.getAnnotationMirror(restService, RestyService.class).get();
 
-            final TypeMap[] types = restService.getAnnotation(RestyService.class).types();
+            TypeMap[] types = restService.getAnnotation(RestyService.class).types();
             for (TypeMap type : types) typeMap.put(typeMap_type(type), typeMap_with(type));
-            final Function<TypeMirror, TypeMirror> typeMapper = t -> typeMap.getOrDefault(t, t);
+            Function<TypeMirror, TypeMirror> typeMapper = t -> typeMap.getOrDefault(t, t);
 
             ClassName serviceName = ClassName.get(restService);
             log("service interface: " + serviceName);
@@ -120,13 +109,13 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                     .get(serviceName.packageName(), serviceName.simpleName() + "_RestyAdapter");
             log("service resty adapter: " + adapterName);
 
-            final TypeSpec.Builder restyBuilder = TypeSpec.interfaceBuilder(restyName.simpleName())
+            TypeSpec.Builder restyBuilder = TypeSpec.interfaceBuilder(restyName.simpleName())
                     .addAnnotations(transformAnnotations(restService.getAnnotationMirrors()))
                     .addOriginatingElement(restService)
                     .addModifiers(Modifier.PUBLIC)
                     .addSuperinterface(RestService.class);
 
-            final TypeSpec.Builder adapterBuilder = TypeSpec.classBuilder(adapterName.simpleName())
+            TypeSpec.Builder adapterBuilder = TypeSpec.classBuilder(adapterName.simpleName())
                     .addOriginatingElement(restService)
                     .addModifiers(Modifier.PUBLIC)
                     .superclass(AbstractAdapterService.class)
@@ -142,11 +131,12 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                     .addStatement("return service")
                     .build());
 
-            final FluentIterable<? extends ExecutableElement> methods = from(restService.getEnclosedElements())
-                    .filter(input -> input.getKind() == ElementKind.METHOD)
-                    .filter(ExecutableElement.class);
+            FluentIterable<? extends ExecutableElement> methods = from(restService.getEnclosedElements())
+                    .filter(element -> element.getKind() == ElementKind.METHOD)
+                    .filter(ExecutableElement.class)
+                    .filter(method -> !(method.getModifiers().contains(STATIC) || method.isDefault()));
             for (ExecutableElement method : methods) {
-                final String methodName = method.getSimpleName().toString();
+                String methodName = method.getSimpleName().toString();
 
                 if (isIncompatible(method)) {
                     adapterBuilder.addMethod(MethodSpec.overriding(method)
@@ -155,15 +145,25 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                     continue;
                 }
 
-                if (!MoreTypes.isTypeOf(Observable.class, method.getReturnType())) {
+                boolean isObservable = isTypeOf(Observable.class, method.getReturnType());
+                boolean isSingle = isTypeOf(Single.class, method.getReturnType());
+                if (!isObservable && !isSingle) {
                     error("Observable<T> return type required", method, annotation);
                     continue;
                 }
 
-                final TypeMirror returnType = asDeclared(method.getReturnType()).getTypeArguments().get(0);
-                final TypeMirror serviceType = typeMapper.apply(returnType);
-                final CodeBlock.Builder paramCasts = CodeBlock.builder();
-                final String parameterNames = from(method.getParameters())
+                TypeMirror returnType = asDeclared(method.getReturnType()).getTypeArguments().get(0);
+                // XXX restygwt is type bounds hostile, implements bounds and wildcards is not trivial (disabled)
+                // if (returnType instanceof TypeVariable) {
+                //     returnType = ((TypeVariable) returnType).getUpperBound();
+                // } else if (returnType instanceof WildcardType) {
+                //     returnType = processingEnv.getTypeUtils().erasure(returnType);
+                // }
+                TypeMirror serviceReturnT = typeMapper.apply(returnType);
+                TypeName serviceReturnN = TypeName.get(serviceReturnT);
+
+                CodeBlock.Builder paramCasts = CodeBlock.builder();
+                String parameterNames = from(method.getParameters())
                         .transform(parameter -> {
                             String paramName = parameter.getSimpleName().toString();
                             if (typeMap.containsKey(parameter.asType())) {
@@ -177,8 +177,12 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                         .join(Joiner.on(", "));
 
                 // Resty methods
-                TypeName javaWrap = ParameterizedTypeName.get(ClassName.get(List.class), TypeName.get(serviceType));
-                TypeName scriptWrap = ParameterizedTypeName.get(ClassName.get(JsList.class), TypeName.get(serviceType));
+                TypeName javaWrap = isObservable
+                        ? ParameterizedTypeName.get(ClassName.get(List.class), serviceReturnN)
+                        : serviceReturnN;
+                TypeName scriptWrap = isObservable
+                        ? ParameterizedTypeName.get(ClassName.get(JsList.class), serviceReturnN)
+                        : isTypeOf(Void.class, serviceReturnT) ? TypeName.get(JavaScriptObject.class) : serviceReturnN;
                 restyBuilder.addMethod(MethodSpec
                         .methodBuilder(methodName)
                         .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
@@ -188,7 +192,7 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                                         TypeName.get(typeMapper.apply(p.asType())), p.getSimpleName().toString())
                                         .addAnnotations(transformAnnotations(p.getAnnotationMirrors()))
                                         .build()))
-                        .addParameter(isOverlay(serviceType)
+                        .addParameter(isOverlay(serviceReturnT)
                                 ? ParameterizedTypeName.get(ClassName.get(OverlayCallback.class), scriptWrap)
                                 : ParameterizedTypeName.get(ClassName.get(MethodCallback.class), javaWrap), "callback")
                         .build());
@@ -210,45 +214,46 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                                         "    service().$5L($6L$7T.<$8T>$9L(subscription));\n" +
                                         "  }\n" +
                                         "})",
-                                /*1*/ ClassName.get(Observable.class),
-                                /*2*/ ClassName.get(Observable.OnSubscribe.class),
+                                /*1*/ ClassName.get(isObservable ? Observable.class : Single.class),
+                                /*2*/ ClassName.get(isObservable
+                                        ? Observable.OnSubscribe.class : Single.OnSubscribe.class),
                                 /*3*/ ClassName.get(returnType),
-                                /*4*/ ClassName.get(Subscriber.class),
+                                /*4*/ ClassName.get(isObservable ? Subscriber.class : SingleSubscriber.class),
                                 /*5*/ methodName,
                                 /*6*/ isNullOrEmpty(parameterNames) ? "" : parameterNames + ", ",
                                 /*7*/ ClassName.get(SubscriberMethodCallback.class),
-                                /*8*/ serviceType,
-                                /*9*/ isOverlay(serviceType) ? "overlay" : "pojo"
+                                /*8*/ serviceReturnT,
+                                /*9*/ isOverlay(serviceReturnT) ? "overlay" : "pojo"
                         ).build());
             }
 
+            Filer filer = processingEnv.getFiler();
             JavaFile.builder(serviceName.packageName(), restyBuilder.build()).build().writeTo(filer);
             JavaFile.builder(serviceName.packageName(), adapterBuilder.build()).build().writeTo(filer);
         }
     }
 
     private boolean isIncompatible(ExecutableElement method) {
-        for (AnnotationMirror annotationMirror : method.getAnnotationMirrors()) {
-            if (annotationMirror.getAnnotationType().toString().endsWith("GwtIncompatible")) {
-                return true;
-            }
-        }
-        return false;
+        return method.getAnnotationMirrors().stream().anyMatch(this::isIncompatible);
+    }
+
+    private boolean isIncompatible(AnnotationMirror a) {
+        return a.getAnnotationType().toString().endsWith("GwtIncompatible");
     }
 
     private boolean isOverlay(TypeMirror T) {
         // Void
-        final TypeMirror vd = processingEnv.getElementUtils().getTypeElement(Void.class.getName()).asType();
+        TypeMirror vd = processingEnv.getElementUtils().getTypeElement(Void.class.getName()).asType();
         // JavaScriptObject
-        final TypeMirror js = processingEnv.getElementUtils().getTypeElement(JavaScriptObject.class.getName()).asType();
+        TypeMirror js = processingEnv.getElementUtils().getTypeElement(JavaScriptObject.class.getName()).asType();
         return processingEnv.getTypeUtils().isSubtype(T, js)
                 || T.getAnnotationsByType(JsType.class).length > 0
                 || processingEnv.getTypeUtils().isSameType(T, vd);
     }
 
-    private FluentIterable<AnnotationSpec> transformAnnotations(List<? extends AnnotationMirror> annotationMirrors) {
+    private Iterable<AnnotationSpec> transformAnnotations(List<? extends AnnotationMirror> annotationMirrors) {
         return from(annotationMirrors)
-                .filter(input -> !MoreTypes.isTypeOf(RestyService.class, input.getAnnotationType()))
+                .filter(input -> !isTypeOf(RestyService.class, input.getAnnotationType()))
                 .transform(AnnotationSpec::get);
     }
 

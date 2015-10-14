@@ -4,13 +4,14 @@ import com.google.gwt.core.client.JavaScriptObject;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import rx.SingleSubscriber;
 import rx.Subscriber;
 import rx.internal.util.BackpressureDrainManager;
 import rx.internal.util.BackpressureDrainManager.BackpressureQueueCallback;
 
 public abstract class SubscriberMethodCallback<T, R> implements MethodCallback<R>, BackpressureQueueCallback {
 
-    public static <T> OverlayCallback<JsList<T>> overlay(Subscriber<? super T> s) {
+    public static <T> OverlayCallback<JsList<T>> overlay(final Subscriber<? super T> s) {
         return new OverlayCallbackAdapter<>(new SubscriberMethodCallback<T, JsList<T>>(s) {
             @Override public void onSuccess(Method method, final JsList<T> ts) {
                 if (ts == null) response = Collections.emptyIterator();
@@ -28,11 +29,36 @@ public abstract class SubscriberMethodCallback<T, R> implements MethodCallback<R
         });
     }
 
+    public static <T> OverlayCallback overlay(final SingleSubscriber<? super T> s) {
+        //noinspection unchecked Void do not extends JavaScriptObject
+        return new OverlayCallbackAdapter(new MethodCallback<T>() {
+            @Override public void onFailure(Method method, Throwable exception) {
+                s.onError(exception);
+            }
+
+            @Override public void onSuccess(Method method, T response) {
+                s.onSuccess(response);
+            }
+        });
+    }
+
     public static <T> MethodCallback<List<T>> pojo(Subscriber<? super T> s) {
         return new SubscriberMethodCallback<T, List<T>>(s) {
             @Override public void onSuccess(Method method, List<T> ts) {
                 this.response = ts.iterator();
                 manager.drain();
+            }
+        };
+    }
+
+    public static <T> MethodCallback<T> pojo(final SingleSubscriber<? super T> s) {
+        return new MethodCallback<T>() {
+            @Override public void onFailure(Method method, Throwable exception) {
+                s.onError(exception);
+            }
+
+            @Override public void onSuccess(Method method, T response) {
+                s.onSuccess(response);
             }
         };
     }

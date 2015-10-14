@@ -16,30 +16,38 @@ import org.fusesource.restygwt.client.Resource;
 import org.fusesource.restygwt.client.RestServiceProxy;
 import rx.Subscriber;
 import rx.functions.Action0;
+import rx.functions.Action1;
 
 public class UI implements EntryPoint {
 
     public void onModuleLoad() {
-        final GreetingService service = GreetingService.Factory.create();
         Resource resource = new Resource(GWT.getModuleBaseURL() + "greeting-service");
-        ((RestServiceProxy) service).setResource(resource);
+
+        final ObservableService oService = ObservableService.Factory.create();
+        ((RestServiceProxy) oService).setResource(resource);
+
+        final SingleService sService = SingleService.Factory.create();
+        ((RestServiceProxy) sService).setResource(resource);
 
         RootPanel.get().add(new Label("Name:"));
         final TextBox nameInput = new TextBox();
         RootPanel.get().add(nameInput);
         nameInput.addValueChangeHandler(new ValueChangeHandler<String>() {
             @Override public void onValueChange(ValueChangeEvent<String> event) {
-                UI.this.getCustomGreeting(service, nameInput.getValue());
+                UI.this.getCustomGreeting(oService, nameInput.getValue());
             }
         });
         nameInput.setValue("ping", true);
 
-        service.ping().doOnTerminate(new Action0() {
-            @Override public void call() { RootPanel.get().add(new Label("pong")); }
+        oService.ping().doOnTerminate(new Action0() {
+            @Override public void call() { RootPanel.get().add(new Label("observable pong")); }
         }).subscribe();
+        sService.ping().subscribe(new Action1<Void>() {
+            @Override public void call(Void n) { RootPanel.get().add(new Label("single pong")); }
+        });
     }
 
-    private void getCustomGreeting(GreetingService service, String name) {
+    private void getCustomGreeting(ObservableService service, String name) {
         Overlay overlay = (Overlay) JavaScriptObject.createObject();
         overlay.setStr(name);
         service.overlay(overlay).subscribe(subscriber("overlays", new AbstractRenderer<Overlay>() {
@@ -47,17 +55,6 @@ public class UI implements EntryPoint {
                 return object.getStr();
             }
         }));
-
-        // XXX requires restygwt path
-        // Interop interop = createInterop();
-        // interop.setStr(name);
-        // service.interop(interop).subscribe(subscriber("interop", new AbstractRenderer<Interop>() {
-        //     public String render(Interop object) {
-        //         return object.getStr()
-        //                 + ", strArr: " + object.getStrArr()
-        //                 + ", intArr: " + Arrays.toString(object.getIntArr());
-        //     }
-        // }));
 
         Pojo pojo = new Pojo();
         pojo.setStr(name);
@@ -86,6 +83,4 @@ public class UI implements EntryPoint {
             }
         };
     }
-
-    static native Interop createInterop() /*-{ return {}; }-*/;
 }
