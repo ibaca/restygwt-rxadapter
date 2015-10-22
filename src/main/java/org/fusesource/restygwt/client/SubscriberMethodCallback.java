@@ -15,15 +15,7 @@ public abstract class SubscriberMethodCallback<T, R> implements MethodCallback<R
         return new OverlayCallbackAdapter<>(new SubscriberMethodCallback<T, JsList<T>>(s) {
             @Override public void onSuccess(Method method, final JsList<T> ts) {
                 if (ts == null) response = Collections.emptyIterator();
-                else response = new Iterator<T>() {
-                    int pos = 0;
-
-                    @Override public boolean hasNext() { return pos < ts.length(); }
-
-                    @Override public T next() { return ts.get(pos++); }
-
-                    @Override public void remove() { throw new UnsupportedOperationException("remove"); }
-                };
+                else response = ts.iterator();
                 manager.drain();
             }
         });
@@ -126,6 +118,18 @@ public abstract class SubscriberMethodCallback<T, R> implements MethodCallback<R
         public final native int length() /*-{
             return this.length;
         }-*/;
+
+        public final Iterator<T> iterator() {
+            return new Iterator<T>() {
+                int pos = 0;
+
+                @Override public boolean hasNext() { return pos < length(); }
+
+                @Override public T next() { return get(pos++); }
+
+                @Override public void remove() { throw new UnsupportedOperationException("remove"); }
+            };
+        }
     }
 
     private static final class OverlayCallbackAdapter<T extends JavaScriptObject> implements OverlayCallback<T> {
