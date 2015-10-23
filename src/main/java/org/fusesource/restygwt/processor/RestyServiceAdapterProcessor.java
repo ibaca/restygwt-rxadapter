@@ -13,6 +13,7 @@ import com.google.common.collect.FluentIterable;
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.js.JsType;
 import com.google.gwt.core.shared.GWT;
+import com.google.gwt.http.client.Request;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -51,6 +52,8 @@ import org.fusesource.restygwt.client.RestyService;
 import org.fusesource.restygwt.client.RestyService.TypeMap;
 import org.fusesource.restygwt.client.SubscriberMethodCallback;
 import org.fusesource.restygwt.client.SubscriberMethodCallback.JsList;
+import org.fusesource.restygwt.client.SubscriberMethodCallback.RequestObservableOnSubscribe;
+import org.fusesource.restygwt.client.SubscriberMethodCallback.RequestSingleOnSubscribe;
 import rx.Observable;
 import rx.Single;
 import rx.SingleSubscriber;
@@ -168,7 +171,7 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                             String paramName = parameter.getSimpleName().toString();
                             if (typeMap.containsKey(parameter.asType())) {
                                 // requires casting
-                                paramName = paramName + "Cast";
+                                paramName = "$" + paramName;
                                 paramCasts.addStatement("final $T $N = ($1T) $N",
                                         typeMapper.apply(parameter.asType()), paramName, parameter.getSimpleName());
                             }
@@ -187,6 +190,7 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                         .methodBuilder(methodName)
                         .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                         .addAnnotations(transformAnnotations(method.getAnnotationMirrors()))
+                        .returns(Request.class)
                         .addParameters(from(method.getParameters())
                                 .transform(p -> ParameterSpec.builder(
                                         TypeName.get(typeMapper.apply(p.asType())), p.getSimpleName().toString())
@@ -208,23 +212,25 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
                                         .addModifiers(Modifier.FINAL)
                                         .addAnnotations(transformAnnotations(p.getAnnotationMirrors()))
                                         .build()))
-                        .addCode(paramCasts.build())
-                        .addStatement("return $1T.create(new $2T<$3T>() {\n" +
-                                        "  public void call($4T<? super $3T> subscription) {\n" +
-                                        "    service().$5L($6L$7T.<$8T>$9L(subscription));\n" +
-                                        "  }\n" +
-                                        "})",
+                        .addCode("return $1T.create(new $2T<$3T>() {\n$>",
                                 /*1*/ ClassName.get(isObservable ? Observable.class : Single.class),
                                 /*2*/ ClassName.get(isObservable
-                                        ? Observable.OnSubscribe.class : Single.OnSubscribe.class),
+                                        ? RequestObservableOnSubscribe.class : RequestSingleOnSubscribe.class),
+                                /*3*/ ClassName.get(returnType))
+                        .addCode(paramCasts.build())
+                        .addCode("public $1T request($2T<? super $3T> $$S) {\n" +
+                                        "  return service().$4L($5L$6T.<$7T>$8L($$S));\n" +
+                                        "};\n",
+                                /*1*/ Request.class,
+                                /*2*/ ClassName.get(isObservable ? Subscriber.class : SingleSubscriber.class),
                                 /*3*/ ClassName.get(returnType),
-                                /*4*/ ClassName.get(isObservable ? Subscriber.class : SingleSubscriber.class),
-                                /*5*/ methodName,
-                                /*6*/ isNullOrEmpty(parameterNames) ? "" : parameterNames + ", ",
-                                /*7*/ ClassName.get(SubscriberMethodCallback.class),
-                                /*8*/ serviceReturnT,
-                                /*9*/ isOverlay(serviceReturnT) ? "overlay" : "pojo"
-                        ).build());
+                                /*4*/ methodName,
+                                /*5*/ isNullOrEmpty(parameterNames) ? "" : parameterNames + ", ",
+                                /*6*/ ClassName.get(SubscriberMethodCallback.class),
+                                /*7*/ serviceReturnT,
+                                /*8*/ isOverlay(serviceReturnT) ? "overlay" : "pojo")
+                        .addCode("$<});\n")
+                        .build());
             }
 
             Filer filer = processingEnv.getFiler();

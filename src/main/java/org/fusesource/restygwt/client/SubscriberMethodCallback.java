@@ -1,13 +1,18 @@
 package org.fusesource.restygwt.client;
 
 import com.google.gwt.core.client.JavaScriptObject;
+import com.google.gwt.http.client.Request;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import rx.Observable;
+import rx.Single;
 import rx.SingleSubscriber;
 import rx.Subscriber;
+import rx.functions.Action0;
 import rx.internal.util.BackpressureDrainManager;
 import rx.internal.util.BackpressureDrainManager.BackpressureQueueCallback;
+import rx.subscriptions.Subscriptions;
 
 public abstract class SubscriberMethodCallback<T, R> implements MethodCallback<R>, BackpressureQueueCallback {
 
@@ -146,5 +151,33 @@ public abstract class SubscriberMethodCallback<T, R> implements MethodCallback<R
         @Override public void onSuccess(Method method, T response) {
             adaptee.onSuccess(method, response);
         }
+    }
+
+    public static abstract class RequestObservableOnSubscribe<T> implements Observable.OnSubscribe<T> {
+
+        @Override public final void call(Subscriber<? super T> subscriber) {
+            final Request request = request(subscriber);
+            subscriber.add(Subscriptions.create(new Action0() {
+                @Override public void call() {
+                    request.cancel();
+                }
+            }));
+        }
+
+        protected abstract Request request(Subscriber<? super T> subscriber);
+    }
+
+    public static abstract class RequestSingleOnSubscribe<T> implements Single.OnSubscribe<T> {
+
+        @Override public final void call(SingleSubscriber<? super T> subscriber) {
+            final Request request = request(subscriber);
+            subscriber.add(Subscriptions.create(new Action0() {
+                @Override public void call() {
+                    request.cancel();
+                }
+            }));
+        }
+
+        protected abstract Request request(SingleSubscriber<? super T> subscriber);
     }
 }
