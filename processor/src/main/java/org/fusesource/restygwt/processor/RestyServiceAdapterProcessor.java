@@ -11,7 +11,6 @@ import com.google.auto.common.MoreElements;
 import com.google.common.base.Joiner;
 import com.google.common.collect.FluentIterable;
 import com.google.gwt.core.client.JavaScriptObject;
-import com.google.gwt.core.client.js.JsType;
 import com.google.gwt.core.shared.GWT;
 import com.google.gwt.http.client.Request;
 import com.squareup.javapoet.AnnotationSpec;
@@ -44,6 +43,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind;
+import jsinterop.annotations.JsType;
 import org.fusesource.restygwt.client.AbstractAdapterService;
 import org.fusesource.restygwt.client.MethodCallback;
 import org.fusesource.restygwt.client.OverlayCallback;
@@ -85,7 +85,7 @@ public class RestyServiceAdapterProcessor extends AbstractProcessor {
     }
 
     private void processAnnotations() throws Exception {
-        List<? extends TypeElement> elements = from(roundEnv.getElementsAnnotatedWith(RestyService.class))
+        List<? extends TypeElement> elements = FluentIterable.from(roundEnv.getElementsAnnotatedWith(RestyService.class))
                 .filter(TypeElement.class)
                 .filter(input -> input.getKind().isInterface())
                 .toList();
