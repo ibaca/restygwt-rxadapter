@@ -1,4 +1,4 @@
-package org.fusesource.restygwt.examples.client;
+package com.intendia.gwt.restyrx.example.client;
 
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
@@ -17,7 +17,7 @@ import rx.Subscriber;
 import rx.functions.Action0;
 import rx.functions.Action1;
 
-public class UI implements EntryPoint {
+public class Example implements EntryPoint {
 
     public void onModuleLoad() {
         Resource resource = new Resource(GWT.getModuleBaseURL() + "greeting-service");
@@ -33,7 +33,7 @@ public class UI implements EntryPoint {
         RootPanel.get().add(nameInput);
         nameInput.addValueChangeHandler(new ValueChangeHandler<String>() {
             @Override public void onValueChange(ValueChangeEvent<String> event) {
-                UI.this.getCustomGreeting(oService, nameInput.getValue());
+                Example.this.getCustomGreeting(oService, nameInput.getValue());
             }
         });
         nameInput.setValue("ping", true);

@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE module PUBLIC "-//Google Inc.//DTD Google Web Toolkit 2.8.1//EN" "http://gwtproject.org/doctype/2.8.1/gwt-module.dtd">
-<module rename-to='ui'>
+<module rename-to='example'>
     <inherits name='com.google.gwt.user.User'/>
-    <inherits name="org.fusesource.restygwt.RestyRx"/>
+    <inherits name="com.intendia.gwt.restyrx.RestyRx"/>
     <collapse-all-properties/>
-    <entry-point class='org.fusesource.restygwt.examples.client.UI'/>
+    <entry-point class='com.intendia.gwt.restyrx.example.client.Example'/>
 </module>

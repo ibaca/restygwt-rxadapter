@@ -1,4 +1,4 @@
-package org.fusesource.restygwt.examples.client;
+package com.intendia.gwt.restyrx.example.client;
 
 import com.google.gwt.core.client.JavaScriptObject;
 

@@ -1,4 +1,4 @@
-package org.fusesource.restygwt.examples.server;
+package com.intendia.gwt.restyrx.example.server;
 
 import static com.fasterxml.jackson.databind.node.JsonNodeFactory.instance;
 

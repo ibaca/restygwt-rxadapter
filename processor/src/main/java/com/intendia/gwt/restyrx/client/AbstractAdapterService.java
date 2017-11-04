@@ -1,5 +1,10 @@
-package org.fusesource.restygwt.client;
+package com.intendia.gwt.restyrx.client;
 
+import org.fusesource.restygwt.client.Dispatcher;
+import org.fusesource.restygwt.client.MethodCallback;
+import org.fusesource.restygwt.client.Resource;
+import org.fusesource.restygwt.client.RestService;
+import org.fusesource.restygwt.client.RestServiceProxy;
 import org.fusesource.restygwt.client.callback.CallbackAware;
 
 public abstract class AbstractAdapterService implements CallbackAware, RestServiceProxy {

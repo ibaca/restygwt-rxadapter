@@ -15,7 +15,6 @@
         <dependency>
             <groupId>com.google.gwt</groupId>
             <artifactId>gwt-user</artifactId>
-            <version>${gwt.version}</version>
         </dependency>
         <dependency>
             <groupId>org.fusesource.restygwt</groupId>
@@ -53,7 +52,7 @@
                 <groupId>net.ltgt.gwt.maven</groupId>
                 <artifactId>gwt-maven-plugin</artifactId>
                 <configuration>
-                    <moduleName>org.fusesource.restygwt.RestyRx</moduleName>
+                    <moduleName>com.intendia.gwt.restyrx.RestyRx</moduleName>
                 </configuration>
             </plugin>
         </plugins>

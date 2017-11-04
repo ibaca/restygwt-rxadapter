@@ -1,10 +1,13 @@
-package org.fusesource.restygwt.client;
+package com.intendia.gwt.restyrx.client;
 
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.http.client.Request;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import org.fusesource.restygwt.client.Method;
+import org.fusesource.restygwt.client.MethodCallback;
+import org.fusesource.restygwt.client.OverlayCallback;
 import rx.Observable;
 import rx.Single;
 import rx.SingleSubscriber;

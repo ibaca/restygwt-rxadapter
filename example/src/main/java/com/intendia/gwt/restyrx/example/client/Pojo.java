@@ -1,4 +1,4 @@
-package org.fusesource.restygwt.examples.client;
+package com.intendia.gwt.restyrx.example.client;
 
 public class Pojo {
     private String str;

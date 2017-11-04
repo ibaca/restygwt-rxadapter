@@ -1,4 +1,4 @@
-package org.fusesource.restygwt.client;
+package com.intendia.gwt.restyrx.client;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
