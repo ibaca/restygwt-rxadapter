@@ -14,8 +14,8 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <gwt.version>2.8.1</gwt.version>
-        <restygwt.version>2.2.1</restygwt.version>
+        <gwt.version>2.8.2</gwt.version>
+        <restygwt.version>2.2.3</restygwt.version>
         <rxjava-gwt.version>1.3.0-beta2</rxjava-gwt.version>
     </properties>
 
@@ -47,7 +47,7 @@
                 <plugin>
                     <groupId>net.ltgt.gwt.maven</groupId>
                     <artifactId>gwt-maven-plugin</artifactId>
-                    <version>1.0-rc-8</version>
+                    <version>1.0-rc-9</version>
                     <extensions>true</extensions>
                     <configuration>
                         <skipModule>true</skipModule>
